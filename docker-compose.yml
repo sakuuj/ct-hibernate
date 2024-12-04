@@ -1,0 +1,11 @@
+services:
+  db:
+    build:
+      dockerfile: Dockerfile-postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready", "-d", "car_showroom" ]
+      interval: 1s
+      timeout: 10s
+      retries: 20
+    ports:
+      - '127.0.0.1:5432:5432'
