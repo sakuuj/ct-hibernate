@@ -1,0 +1,48 @@
+plugins {
+    id 'java'
+}
+
+group = 'by.clevertec.sakuuj.carshowroom'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+
+dependencies {
+
+    annotationProcessor platform(project(':bom'))
+    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.mapstruct:mapstruct-processor'
+
+    compileOnly platform(project(':bom'))
+    compileOnly 'org.projectlombok:lombok'
+
+    implementation platform(project(':bom'))
+    implementation 'org.hibernate.orm:hibernate-core'
+    implementation 'org.liquibase:liquibase-core'
+    implementation 'org.mapstruct:mapstruct'
+
+
+    runtimeOnly platform(project(':bom'))
+    runtimeOnly 'org.postgresql:postgresql'
+
+    testAnnotationProcessor platform(project(':bom'))
+    testAnnotationProcessor 'org.projectlombok:lombok'
+
+    testCompileOnly platform(project(':bom'))
+    testCompileOnly 'org.projectlombok:lombok'
+
+    testImplementation platform(project(':bom'))
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.assertj:assertj-core'
+}
+
+test {
+    useJUnitPlatform()
+}

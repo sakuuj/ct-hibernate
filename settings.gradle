@@ -1,0 +1,4 @@
+rootProject.name = 'car-showroom'
+include 'bom'
+include 'application'
+
