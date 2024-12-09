@@ -1,11 +1,11 @@
-package by.clevertec.sakuuj.carshowroom.repository.impl;
+package by.clevertec.sakuuj.carshowroom.repository.custom;
 
 import by.clevertec.sakuuj.carshowroom.domain.entity.Car;
 import by.clevertec.sakuuj.carshowroom.domain.entity.CarShowroom;
 import by.clevertec.sakuuj.carshowroom.exception.EntityNotFoundException;
-import by.clevertec.sakuuj.carshowroom.repository.CarRepo;
-import by.clevertec.sakuuj.carshowroom.repository.common.Pageable;
 import by.clevertec.sakuuj.carshowroom.repository.common.PageableUtils;
+import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
 import org.hibernate.Session;
 import org.hibernate.query.SelectionQuery;
 import org.hibernate.query.SortDirection;
@@ -13,44 +13,32 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.hibernate.query.criteria.JpaPredicate;
 import org.hibernate.query.criteria.JpaRoot;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class CarRepoImpl extends SimpleRepo<UUID, Car> implements CarRepo {
+@Repository
+@RequiredArgsConstructor
+public class CarRepoCustomImpl implements CarRepoCustom {
 
-    public CarRepoImpl() {
-        super(Car.class, "id");
-    }
+    private final EntityManager entityManager;
+
 
     @Override
-    public void addCarToCarShowroom(UUID carId, UUID carShowroomId, Session session) {
+    public void addCarToCarShowroom(UUID carId, UUID carShowroomId) {
 
-        Car car = findById(carId, session).orElseThrow(EntityNotFoundException::new);
+        Session session = entityManager.unwrap(Session.class);
+
+        Car car = session.byId(Car.class)
+                .loadOptional(carId)
+                .orElseThrow(EntityNotFoundException::new);
         CarShowroom carShowroomReference = session.getReference(CarShowroom.class, carShowroomId);
 
         car.setCarShowroom(carShowroomReference);
-    }
-
-    @Override
-    public List<Car> findAllSortedByPrice(Pageable pageable, SortDirection sortDirection, Session session) {
-
-        HibernateCriteriaBuilder builder = session.getCriteriaBuilder();
-
-        JpaCriteriaQuery<Car> query = builder.createQuery(Car.class);
-
-        JpaRoot<Car> root = query.from(Car.class);
-
-        query.select(root);
-        query.orderBy(builder.sort(root.get("price"), sortDirection));
-
-        SelectionQuery<Car> createdQuery = session.createSelectionQuery(query);
-
-        PageableUtils.setPageable(createdQuery, pageable);
-
-        return createdQuery.list();
     }
 
     @Override
@@ -60,10 +48,10 @@ public class CarRepoImpl extends SimpleRepo<UUID, Car> implements CarRepo {
             Short categoryId,
             BigDecimal minPriceIncl,
             BigDecimal maxPriceIncl,
-            Pageable pageable,
-            SortDirection sortDirection,
-            Session session
+            Pageable pageable
     ) {
+        Session session = entityManager.unwrap(Session.class);
+
         HibernateCriteriaBuilder builder = session.getCriteriaBuilder();
 
         JpaCriteriaQuery<Car> query = builder.createQuery(Car.class);
@@ -97,6 +85,9 @@ public class CarRepoImpl extends SimpleRepo<UUID, Car> implements CarRepo {
         }
 
         query.select(root);
+
+        SortDirection sortDirection = PageableUtils.getSortDirection(pageable, "id");
+
         query.orderBy(builder.sort(root.get("id"), sortDirection));
 
         SelectionQuery<Car> createdQuery = session.createSelectionQuery(query);
@@ -105,9 +96,4 @@ public class CarRepoImpl extends SimpleRepo<UUID, Car> implements CarRepo {
         return createdQuery.list();
     }
 
-    @Override
-    public List<Car> findAllWithCategoryAndCarShowroom(Pageable pageable, SortDirection sortDirection, Session session) {
-
-        return findAllWithFetchGraph(pageable, sortDirection,  "Car.withCategory-withCarShowroom", session);
-    }
 }

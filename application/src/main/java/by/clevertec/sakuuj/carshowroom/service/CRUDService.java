@@ -1,16 +1,13 @@
 package by.clevertec.sakuuj.carshowroom.service;
 
 import by.clevertec.sakuuj.carshowroom.dto.PageResponse;
-import by.clevertec.sakuuj.carshowroom.repository.common.Pageable;
-import org.hibernate.query.SortDirection;
-
-import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 
 public interface CRUDService<ID, Req, Resp> {
 
-    PageResponse<Resp> findAll(Pageable pageable, SortDirection sortDirection);
+    PageResponse<Resp> findAll(Pageable pageable);
 
-    Optional<Resp> findById(ID id);
+    Resp findById(ID id);
 
     Resp create(Req request);
 

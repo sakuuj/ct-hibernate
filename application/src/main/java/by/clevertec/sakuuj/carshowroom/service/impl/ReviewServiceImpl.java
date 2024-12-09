@@ -7,16 +7,18 @@ import by.clevertec.sakuuj.carshowroom.dto.ReviewResponse;
 import by.clevertec.sakuuj.carshowroom.exception.EntityNotFoundException;
 import by.clevertec.sakuuj.carshowroom.mapper.ReviewMapper;
 import by.clevertec.sakuuj.carshowroom.repository.ReviewRepo;
-import by.clevertec.sakuuj.carshowroom.repository.common.Pageable;
 import by.clevertec.sakuuj.carshowroom.service.ReviewService;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.SessionFactory;
-import org.hibernate.query.SortDirection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+@Service
+@Transactional
 @RequiredArgsConstructor
 public class ReviewServiceImpl implements ReviewService {
 
@@ -24,53 +26,54 @@ public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewRepo reviewRepo;
 
-    private final SessionFactory sessionFactory;
-
     @Override
-    public PageResponse<ReviewResponse> findAll(Pageable pageable, SortDirection sortDirection) {
+    public PageResponse<ReviewResponse> findAll(Pageable pageable) {
 
-        List<Review> found = sessionFactory.fromTransaction(session -> reviewRepo.findAll(pageable, sortDirection, session));
-        List<ReviewResponse> pageContent = found.stream()
-                .map(reviewMapper::toResponse)
-                .toList();
+        Page<ReviewResponse> foundPage = reviewRepo.findAll(pageable)
+                .map(reviewMapper::toResponse);
 
-        return PageResponse.builder(pageContent, pageable).build();
+        return PageResponse.of(foundPage);
     }
 
     @Override
-    public Optional<ReviewResponse> findById(UUID id) {
+    public ReviewResponse findById(UUID id) {
 
-        return sessionFactory.fromTransaction(session -> reviewRepo.findById(id, session))
-                .map(reviewMapper::toResponse);
+        return reviewRepo.findById(id).map(reviewMapper::toResponse)
+                .orElseThrow(EntityNotFoundException::new);
     }
 
     @Override
     public ReviewResponse create(ReviewRequest request) {
 
-        Review savedReview = sessionFactory.fromTransaction(session -> {
+        Review reviewToSave = reviewMapper.toEntity(request);
+        Review saved = reviewRepo.save(reviewToSave);
 
-            Review reviewToSave = reviewMapper.toEntity(request, session);
-            return reviewRepo.create(reviewToSave, session);
-        });
 
-        return reviewMapper.toResponse(savedReview);
+        return reviewMapper.toResponse(saved);
     }
 
     @Override
     public void update(UUID id, ReviewRequest request) {
 
-        sessionFactory.inTransaction(session -> {
+        Review reviewToUpdate = reviewRepo.findById(id)
+                .orElseThrow(EntityNotFoundException::new);
 
-            Review reviewToUpdate = reviewRepo.findById(id, session)
-                    .orElseThrow(EntityNotFoundException::new);
-
-            reviewMapper.updateEntity(reviewToUpdate, request, session);
-        });
+        reviewMapper.updateEntity(reviewToUpdate, request);
     }
 
     @Override
     public void deleteById(UUID id) {
 
-        sessionFactory.inTransaction(session -> reviewRepo.deleteById(id, session));
+        reviewRepo.deleteById(id);
+    }
+
+    @Override
+    public PageResponse<ReviewResponse> findAllBySearchTerms(Pageable pageable, List<String> searchTerms) {
+        List<ReviewResponse> content = reviewRepo.findAllBySearchTerms(pageable, searchTerms)
+                .stream()
+                .map(reviewMapper::toResponse)
+                .toList();
+
+        return PageResponse.builder(content, pageable).build();
     }
 }

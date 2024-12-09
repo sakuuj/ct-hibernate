@@ -6,9 +6,12 @@ import by.clevertec.sakuuj.carshowroom.dto.CarShowroomResponse;
 import org.mapstruct.InheritConfiguration;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 
-@Mapper
+@Mapper(
+        componentModel = MappingConstants.ComponentModel.SPRING
+)
 public interface CarShowroomMapper {
 
     @Mapping(target = "id", ignore = true)

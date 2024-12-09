@@ -1,11 +1,29 @@
 services:
+  app:
+    depends_on:
+      db:
+        condition: service_healthy
+    build: .
+    networks:
+      - net
+    ports:
+      - "127.0.0.1:8080:8080"
+
   db:
-    build:
-      dockerfile: Dockerfile-postgres
+    image: postgres:16.6-alpine3.20
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=car_showroom
+      - PGUSER=postgres
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready", "-d", "car_showroom" ]
       interval: 1s
       timeout: 10s
       retries: 20
-    ports:
-      - '127.0.0.1:5432:5432'
+      start_period: 10s
+    networks:
+      - net
+
+networks:
+  net:

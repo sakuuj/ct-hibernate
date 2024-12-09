@@ -8,16 +8,17 @@ import by.clevertec.sakuuj.carshowroom.exception.EntityNotFoundException;
 import by.clevertec.sakuuj.carshowroom.mapper.CarShowroomMapper;
 import by.clevertec.sakuuj.carshowroom.repository.CarRepo;
 import by.clevertec.sakuuj.carshowroom.repository.CarShowroomRepo;
-import by.clevertec.sakuuj.carshowroom.repository.common.Pageable;
 import by.clevertec.sakuuj.carshowroom.service.CarShowroomService;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.SessionFactory;
-import org.hibernate.query.SortDirection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+@Service
+@Transactional
 @RequiredArgsConstructor
 public class CarShowroomServiceImpl implements CarShowroomService {
 
@@ -26,61 +27,49 @@ public class CarShowroomServiceImpl implements CarShowroomService {
     private final CarRepo carRepo;
     private final CarShowroomRepo carShowroomRepo;
 
-    private final SessionFactory sessionFactory;
-
     @Override
     public void addCarToCarShowroom(UUID carId, UUID carShowroomId) {
 
-        sessionFactory.inTransaction(
-                session -> carRepo.addCarToCarShowroom(carId, carShowroomId, session)
-        );
+        carRepo.addCarToCarShowroom(carId, carShowroomId);
     }
 
     @Override
-    public PageResponse<CarShowroomResponse> findAll(Pageable pageable, SortDirection sortDirection) {
+    public PageResponse<CarShowroomResponse> findAll(Pageable pageable) {
 
-        List<CarShowroom> found = sessionFactory.fromTransaction(session -> carShowroomRepo.findAll(pageable, sortDirection, session));
-        List<CarShowroomResponse> pageContent = found.stream()
-                .map(carShowroomMapper::toResponse)
-                .toList();
-
-        return PageResponse.builder(pageContent, pageable).build();
-    }
-
-    @Override
-    public Optional<CarShowroomResponse> findById(UUID id) {
-
-        return sessionFactory.fromTransaction(session -> carShowroomRepo.findById(id, session))
+        Page<CarShowroomResponse> foundPage = carShowroomRepo.findAll(pageable)
                 .map(carShowroomMapper::toResponse);
+
+        return PageResponse.of(foundPage);
+    }
+
+    @Override
+    public CarShowroomResponse findById(UUID id) {
+
+        return carShowroomRepo.findById(id).map(carShowroomMapper::toResponse)
+                .orElseThrow(EntityNotFoundException::new);
     }
 
     @Override
     public CarShowroomResponse create(CarShowroomRequest request) {
 
-        CarShowroom savedCarShowroom = sessionFactory.fromTransaction(session -> {
+        CarShowroom carShowroomToSave = carShowroomMapper.toEntity(request);
+        CarShowroom saved = carShowroomRepo.save(carShowroomToSave);
 
-            CarShowroom carShowroomToSave = carShowroomMapper.toEntity(request);
-            return carShowroomRepo.create(carShowroomToSave, session);
-        });
-
-        return carShowroomMapper.toResponse(savedCarShowroom);
+        return carShowroomMapper.toResponse(saved);
     }
 
     @Override
     public void update(UUID id, CarShowroomRequest carShowroomRequest) {
 
-        sessionFactory.inTransaction(session -> {
+        CarShowroom carShowroomToUpdate = carShowroomRepo.findById(id)
+                .orElseThrow(EntityNotFoundException::new);
 
-            CarShowroom carShowroomToUpdate = carShowroomRepo.findById(id, session)
-                    .orElseThrow(EntityNotFoundException::new);
-
-            carShowroomMapper.updateEntity(carShowroomToUpdate, carShowroomRequest);
-        });
+        carShowroomMapper.updateEntity(carShowroomToUpdate, carShowroomRequest);
     }
 
     @Override
     public void deleteById(UUID id) {
 
-        sessionFactory.inTransaction(session -> carShowroomRepo.deleteById(id, session));
+        carShowroomRepo.deleteById(id);
     }
 }

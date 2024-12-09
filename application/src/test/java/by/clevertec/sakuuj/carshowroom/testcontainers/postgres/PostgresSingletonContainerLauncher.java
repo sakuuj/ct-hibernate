@@ -1,7 +1,5 @@
 package by.clevertec.sakuuj.carshowroom.testcontainers.postgres;
 
-import org.hibernate.SessionFactory;
-import org.junit.jupiter.api.AfterEach;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
@@ -30,11 +28,10 @@ public abstract class PostgresSingletonContainerLauncher {
                 + "/" + DATABASE;
     }
 
-    protected static final SessionFactory SESSION_FACTORY = TestSessionFactory.getInstance();
 
-    @AfterEach
-    public void cleanDb() {
-
-        PostgresDBCleaner.truncateTables(SESSION_FACTORY);
-    }
+//    @AfterEach
+//    public void cleanDb() {
+//
+//        PostgresDBCleaner.truncateTables(SESSION_FACTORY);
+//    }
 }

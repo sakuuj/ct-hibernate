@@ -1,9 +1,9 @@
-package by.clevertec.sakuuj.carshowroom.repository.impl;
+package by.clevertec.sakuuj.carshowroom.repository.custom;
 
 import by.clevertec.sakuuj.carshowroom.domain.entity.Review;
-import by.clevertec.sakuuj.carshowroom.repository.ReviewRepo;
-import by.clevertec.sakuuj.carshowroom.repository.common.Pageable;
 import by.clevertec.sakuuj.carshowroom.repository.common.PageableUtils;
+import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
 import org.hibernate.Session;
 import org.hibernate.query.SelectionQuery;
 import org.hibernate.query.SortDirection;
@@ -11,24 +11,25 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.hibernate.query.criteria.JpaPredicate;
 import org.hibernate.query.criteria.JpaRoot;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-public class ReviewRepoImpl extends SimpleRepo<UUID, Review> implements ReviewRepo {
+@Repository
+@RequiredArgsConstructor
+public class ReviewRepoCustomImpl implements ReviewRepoCustom {
 
-    public ReviewRepoImpl() {
-        super(Review.class, "id");
-    }
+    private final EntityManager entityManager;
 
     @Override
     public List<Review> findAllBySearchTerms(
             Pageable pageable,
-            SortDirection sortDirection,
-            List<String> searchTerms,
-            Session session
+            List<String> searchTerms
     ) {
+        Session session = entityManager.unwrap(Session.class);
+
         HibernateCriteriaBuilder builder = session.getCriteriaBuilder();
 
         JpaCriteriaQuery<Review> query = builder.createQuery(Review.class);
@@ -46,6 +47,7 @@ public class ReviewRepoImpl extends SimpleRepo<UUID, Review> implements ReviewRe
             query.where(predicates.toArray(JpaPredicate[]::new));
         }
 
+        SortDirection sortDirection = PageableUtils.getSortDirection(pageable, "id");
         query.orderBy(builder.sort(root.get("id"), sortDirection));
         SelectionQuery<Review> createdQuery = session.createSelectionQuery(query);
 
