@@ -1,19 +1,10 @@
 package by.clevertec.sakuuj.carshowroom.repository;
 
 import by.clevertec.sakuuj.carshowroom.domain.entity.Review;
-import by.clevertec.sakuuj.carshowroom.repository.common.Pageable;
-import org.hibernate.Session;
-import org.hibernate.query.SortDirection;
+import by.clevertec.sakuuj.carshowroom.repository.custom.ReviewRepoCustom;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
 import java.util.UUID;
 
-public interface ReviewRepo extends Repo<UUID, Review> {
-
-    List<Review> findAllBySearchTerms(
-            Pageable pageable,
-            SortDirection sortDirection,
-            List<String> searchTerms,
-            Session session
-    );
+public interface ReviewRepo extends JpaRepository<Review, UUID>, ReviewRepoCustom {
 }

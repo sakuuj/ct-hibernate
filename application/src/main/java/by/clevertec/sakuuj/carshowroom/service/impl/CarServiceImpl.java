@@ -7,16 +7,21 @@ import by.clevertec.sakuuj.carshowroom.dto.PageResponse;
 import by.clevertec.sakuuj.carshowroom.exception.EntityNotFoundException;
 import by.clevertec.sakuuj.carshowroom.mapper.CarMapper;
 import by.clevertec.sakuuj.carshowroom.repository.CarRepo;
-import by.clevertec.sakuuj.carshowroom.repository.common.Pageable;
 import by.clevertec.sakuuj.carshowroom.service.CarService;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.SessionFactory;
-import org.hibernate.query.SortDirection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+@Service
+@Transactional
 @RequiredArgsConstructor
 public class CarServiceImpl implements CarService {
 
@@ -24,12 +29,11 @@ public class CarServiceImpl implements CarService {
 
     private final CarRepo carRepo;
 
-    private final SessionFactory sessionFactory;
-
+    @Transactional(readOnly = true)
     @Override
-    public PageResponse<CarResponse> findAll(Pageable pageable, SortDirection sortDirection) {
+    public PageResponse<CarResponse> findAll(Pageable pageable) {
 
-        List<Car> found = sessionFactory.fromTransaction(session -> carRepo.findAll(pageable, sortDirection, session));
+        Page<Car> found = carRepo.findAll(pageable);
         List<CarResponse> pageContent = found.stream()
                 .map(carMapper::toResponse)
                 .toList();
@@ -37,21 +41,19 @@ public class CarServiceImpl implements CarService {
         return PageResponse.builder(pageContent, pageable).build();
     }
 
+    @Transactional(readOnly = true)
     @Override
-    public Optional<CarResponse> findById(UUID id) {
+    public CarResponse findById(UUID id) {
 
-        return sessionFactory.fromTransaction(session -> carRepo.findById(id, session))
-                .map(carMapper::toResponse);
+        return carRepo.findById(id).map(carMapper::toResponse)
+                .orElseThrow(EntityNotFoundException::new);
     }
 
     @Override
     public CarResponse create(CarRequest request) {
 
-        Car savedCar = sessionFactory.fromTransaction(session -> {
-
-            Car carToSave = carMapper.toEntity(request, session);
-            return carRepo.create(carToSave, session);
-        });
+        Car carToSave = carMapper.toEntity(request);
+        Car savedCar = carRepo.save(carToSave);
 
         return carMapper.toResponse(savedCar);
     }
@@ -59,18 +61,50 @@ public class CarServiceImpl implements CarService {
     @Override
     public void update(UUID id, CarRequest carRequest) {
 
-        sessionFactory.inTransaction(session -> {
+        Car carToUpdate = carRepo.findById(id)
+                .orElseThrow(EntityNotFoundException::new);
 
-            Car carToUpdate = carRepo.findById(id, session)
-                    .orElseThrow(EntityNotFoundException::new);
+        carMapper.updateEntity(carToUpdate, carRequest);
 
-            carMapper.updateEntity(carToUpdate, carRequest, session);
-        });
     }
 
     @Override
     public void deleteById(UUID id) {
 
-        sessionFactory.inTransaction(session -> carRepo.deleteById(id, session));
+        carRepo.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<CarResponse> findAllSortedByPrice(Pageable pageable) {
+
+        PageRequest pageRequest = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by("price").ascending()
+        );
+
+        Page<CarResponse> page = carRepo.findAll(pageRequest).map(carMapper::toResponse);
+
+        return PageResponse.of(page);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<CarResponse> findAllByParams(String make, Short productionYear, Short categoryId, BigDecimal minPriceIncl, BigDecimal maxPriceIncl, Pageable pageable) {
+
+        List<CarResponse> found = carRepo.findAllByParams(
+                        make,
+                        productionYear,
+                        categoryId,
+                        minPriceIncl,
+                        maxPriceIncl,
+                        pageable
+                ).stream()
+                .map(carMapper::toResponse)
+                .toList();
+
+        return PageResponse.builder(found, pageable)
+                .build();
     }
 }

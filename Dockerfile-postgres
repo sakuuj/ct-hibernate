@@ -1,6 +1,0 @@
-FROM postgres:16.6-alpine3.20
-
-ENV POSTGRES_USER postgres
-ENV POSTGRES_PASSWORD postgres
-ENV POSTGRES_DB car_showroom
-ENV PGUSER postgres

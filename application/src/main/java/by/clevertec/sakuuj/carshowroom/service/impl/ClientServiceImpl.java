@@ -7,16 +7,17 @@ import by.clevertec.sakuuj.carshowroom.dto.PageResponse;
 import by.clevertec.sakuuj.carshowroom.exception.EntityNotFoundException;
 import by.clevertec.sakuuj.carshowroom.mapper.ClientMapper;
 import by.clevertec.sakuuj.carshowroom.repository.ClientRepo;
-import by.clevertec.sakuuj.carshowroom.repository.common.Pageable;
 import by.clevertec.sakuuj.carshowroom.service.ClientService;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.SessionFactory;
-import org.hibernate.query.SortDirection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+@Service
+@Transactional
 @RequiredArgsConstructor
 public class ClientServiceImpl implements ClientService {
 
@@ -24,61 +25,49 @@ public class ClientServiceImpl implements ClientService {
 
     private final ClientRepo clientRepo;
 
-    private final SessionFactory sessionFactory;
 
     @Override
     public void addCarToClient(UUID carId, UUID clientId) {
 
-        sessionFactory.inTransaction(
-                session -> clientRepo.addCarToClient(carId, clientId, session)
-        );
+        clientRepo.addCarToClient(carId, clientId);
     }
 
     @Override
-    public PageResponse<ClientResponse> findAll(Pageable pageable, SortDirection sortDirection) {
+    public PageResponse<ClientResponse> findAll(Pageable pageable) {
 
-        List<Client> found = sessionFactory.fromTransaction(session -> clientRepo.findAll(pageable, sortDirection, session));
-        List<ClientResponse> pageContent = found.stream()
-                .map(clientMapper::toResponse)
-                .toList();
+        Page<ClientResponse> found = clientRepo.findAll(pageable).map(clientMapper::toResponse);
 
-        return PageResponse.builder(pageContent, pageable).build();
+        return PageResponse.of(found);
     }
 
     @Override
-    public Optional<ClientResponse> findById(UUID id) {
+    public ClientResponse findById(UUID id) {
 
-        return sessionFactory.fromTransaction(session -> clientRepo.findById(id, session))
-                .map(clientMapper::toResponse);
+        return clientRepo.findById(id).map(clientMapper::toResponse)
+                .orElseThrow(EntityNotFoundException::new);
     }
 
     @Override
     public ClientResponse create(ClientRequest request) {
 
-        Client savedClient = sessionFactory.fromTransaction(session -> {
+        Client clientToSave = clientMapper.toEntity(request);
+        Client saved = clientRepo.save(clientToSave);
 
-            Client clientToSave = clientMapper.toEntity(request);
-            return clientRepo.create(clientToSave, session);
-        });
-
-        return clientMapper.toResponse(savedClient);
+        return clientMapper.toResponse(saved);
     }
 
     @Override
     public void update(UUID id, ClientRequest request) {
 
-        sessionFactory.inTransaction(session -> {
-
-            Client clientToUpdate = clientRepo.findById(id, session)
+            Client clientToUpdate = clientRepo.findById(id)
                     .orElseThrow(EntityNotFoundException::new);
 
             clientMapper.updateEntity(clientToUpdate, request);
-        });
     }
 
     @Override
     public void deleteById(UUID id) {
 
-        sessionFactory.inTransaction(session -> clientRepo.deleteById(id, session));
+        clientRepo.deleteById(id);
     }
 }

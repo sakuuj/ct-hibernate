@@ -1,0 +1,8 @@
+hibernate.connection.url: jdbc:postgresql://db:5432/car_showroom
+hibernate.connection.username: postgres
+hibernate.connection.password: postgres
+hibernate.format_sql: true
+hibernate.show_sql: true
+hibernate.driver_class: org.postgresql.Driver
+jakarta.persistence.schema-generation.database.action: validate
+liquibase.changeLog: classpath:liquibase/changelog_root.yml

@@ -1,7 +1,8 @@
 package by.clevertec.sakuuj.carshowroom.dto;
 
-import by.clevertec.sakuuj.carshowroom.repository.common.Pageable;
 import lombok.Builder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -19,6 +20,14 @@ public record PageResponse<T>(
 
     public static <T> PageResponseBuilder<T> builder(List<T> content, Pageable pageable) {
 
-        return new PageResponseBuilder<T>().content(content);
+        return new PageResponseBuilder<T>().content(content)
+                .pageSize(pageable.getPageSize())
+                .pageNumber(pageable.getPageNumber());
+    }
+
+    public static <T> PageResponse<T> of(Page<T> page) {
+
+        return PageResponse.builder(page.getContent(), page.getPageable())
+                .build();
     }
 }

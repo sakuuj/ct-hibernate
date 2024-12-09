@@ -7,15 +7,15 @@ import by.clevertec.sakuuj.carshowroom.dto.PageResponse;
 import by.clevertec.sakuuj.carshowroom.exception.EntityNotFoundException;
 import by.clevertec.sakuuj.carshowroom.mapper.CategoryMapper;
 import by.clevertec.sakuuj.carshowroom.repository.CategoryRepo;
-import by.clevertec.sakuuj.carshowroom.repository.common.Pageable;
 import by.clevertec.sakuuj.carshowroom.service.CategoryService;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.SessionFactory;
-import org.hibernate.query.SortDirection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
-
+@Service
+@Transactional
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
@@ -23,54 +23,44 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepo categoryRepo;
 
-    private final SessionFactory sessionFactory;
-
 
     @Override
-    public PageResponse<CategoryResponse> findAll(Pageable pageable, SortDirection sortDirection) {
+    public PageResponse<CategoryResponse> findAll(Pageable pageable) {
 
-        List<Category> found = sessionFactory.fromTransaction(session -> categoryRepo.findAll(pageable, sortDirection, session));
-        List<CategoryResponse> pageContent = found.stream()
-                .map(categoryMapper::toResponse)
-                .toList();
+        Page<CategoryResponse> foundPage = categoryRepo.findAll(pageable)
+                .map(categoryMapper::toResponse);
 
-        return PageResponse.builder(pageContent, pageable).build();
+        return PageResponse.of(foundPage);
     }
 
     @Override
-    public Optional<CategoryResponse> findById(Short id) {
+    public CategoryResponse findById(Short id) {
 
-        return sessionFactory.fromTransaction(session -> categoryRepo.findById(id, session))
-                .map(categoryMapper::toResponse);
+        return categoryRepo.findById(id).map(categoryMapper::toResponse)
+                .orElseThrow(EntityNotFoundException::new);
     }
 
     @Override
     public CategoryResponse create(CategoryRequest request) {
 
-        Category savedCategory = sessionFactory.fromTransaction(session -> {
+        Category categoryToSave = categoryMapper.toEntity(request);
+        Category saved = categoryRepo.save(categoryToSave);
 
-            Category categoryToSave = categoryMapper.toEntity(request);
-            return categoryRepo.create(categoryToSave, session);
-        });
-
-        return categoryMapper.toResponse(savedCategory);
+        return categoryMapper.toResponse(saved);
     }
 
     @Override
     public void update(Short id, CategoryRequest request) {
 
-        sessionFactory.inTransaction(session -> {
+        Category categoryToUpdate = categoryRepo.findById(id)
+                .orElseThrow(EntityNotFoundException::new);
 
-            Category categoryToUpdate = categoryRepo.findById(id, session)
-                    .orElseThrow(EntityNotFoundException::new);
-
-            categoryMapper.updateEntity(categoryToUpdate, request);
-        });
+        categoryMapper.updateEntity(categoryToUpdate, request);
     }
 
     @Override
     public void deleteById(Short id) {
 
-        sessionFactory.inTransaction(session -> categoryRepo.deleteById(id, session));
+        categoryRepo.deleteById(id);
     }
 }
